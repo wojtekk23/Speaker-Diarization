@@ -90,7 +90,7 @@ When I added an insignificate bias (e.g. 0.00001) to each element of vectors, er
     Negative Log Likelihood: 1.7123	Sigma2 Prior: -646.6375	Regularization: 0.0007
 
 #### Clustering
-`python speakerDiarization.py`
+`python speakerDiarization.py --audio_file wavs/rmdmy.wav`
 
 The Result is showing as below:(3 speakers)
 
