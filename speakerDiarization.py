@@ -16,22 +16,35 @@ from viewer import PlotDiar
 #        Parse the argument
 # ===========================================
 import argparse
-parser = argparse.ArgumentParser()
-# set up training configuration.
-parser.add_argument('--gpu', default='', type=str)
-parser.add_argument('--resume', default=r'ghostvlad/pretrained/weights.h5', type=str)
-parser.add_argument('--data_path', default='4persons', type=str)
-# set up network configuration.
-parser.add_argument('--net', default='resnet34s', choices=['resnet34s', 'resnet34l'], type=str)
-parser.add_argument('--ghost_cluster', default=2, type=int)
-parser.add_argument('--vlad_cluster', default=8, type=int)
-parser.add_argument('--bottleneck_dim', default=512, type=int)
-parser.add_argument('--aggregation_mode', default='gvlad', choices=['avg', 'vlad', 'gvlad'], type=str)
-# set up learning rate, training loss and optimizer.
-parser.add_argument('--loss', default='softmax', choices=['softmax', 'amsoftmax'], type=str)
-parser.add_argument('--test_type', default='normal', choices=['normal', 'hard', 'extend'], type=str)
 
 global args
+global diarization_parser 
+global inference_parser
+
+diarization_parser = argparse.ArgumentParser(add_help=False)
+# set up training configuration.
+diarization_parser.add_argument('--gpu', default='', type=str)
+diarization_parser.add_argument('--resume', default=r'ghostvlad/pretrained/weights.h5', type=str)
+diarization_parser.add_argument('--data_path', default='4persons', type=str)
+# set up network configuration.
+diarization_parser.add_argument('--net', default='resnet34s', choices=['resnet34s', 'resnet34l'], type=str)
+diarization_parser.add_argument('--ghost_cluster', default=2, type=int)
+diarization_parser.add_argument('--vlad_cluster', default=8, type=int)
+diarization_parser.add_argument('--bottleneck_dim', default=512, type=int)
+diarization_parser.add_argument('--aggregation_mode', default='gvlad', choices=['avg', 'vlad', 'gvlad'], type=str)
+# set up learning rate, training loss and optimizer.
+diarization_parser.add_argument('--loss', default='softmax', choices=['softmax', 'amsoftmax'], type=str)
+diarization_parser.add_argument('--test_type', default='normal', choices=['normal', 'hard', 'extend'], type=str)
+
+# set up inference configuration
+inference_parser = argparse.ArgumentParser(add_help=False)
+inference_parser.add_argument('--audio_file', required=True, type=str)
+inference_parser.add_argument('--pretrained_model', default='pretrained/saved_model.uisrnn_benchmark', type=str)
+inference_parser.add_argument('--rttm', default=0, type=int)
+inference_parser.add_argument('--rttm_dir', default=None, type=str)
+inference_parser.add_argument('--viewer', default=0, type=int)
+
+parser = argparse.ArgumentParser(parents=[diarization_parser, inference_parser])
 args = parser.parse_args()
 
 
@@ -132,9 +145,13 @@ def load_data(path, win_length=400, sr=16000, hop_length=160, n_fft=512, embeddi
     return utterances_spec, intervals
 
 def main(wav_path, embedding_per_second=1.0, overlap_rate=0.5):
+    filename = os.path.basename(wav_path)
+    filecore = filename.rsplit('.', 1)[0]
+    
+    diarization_args, _ = diarization_parser.parse_known_args()
 
     # gpu configuration
-    toolkits.initialize_GPU(args)
+    toolkits.initialize_GPU(diarization_args)
 
     params = {'dim': (257, None, 1),
               'nfft': 512,
@@ -148,7 +165,7 @@ def main(wav_path, embedding_per_second=1.0, overlap_rate=0.5):
 
     network_eval = spkModel.vggvox_resnet2d_icassp(input_dim=params['dim'],
                                                 num_class=params['n_classes'],
-                                                mode='eval', args=args)
+                                                mode='eval', args=diarization_args)
     network_eval.load_weights(args.resume, by_name=True)
 
 
@@ -188,8 +205,8 @@ def main(wav_path, embedding_per_second=1.0, overlap_rate=0.5):
                     e = mapTable[keys[i-1]] + offset
 
             speakerSlice[spk][tid]['start'] = s
-            speakerSlice[spk][tid]['stop'] = e
-
+            speakerSlice[spk][tid]['stop'] = e        
+            
     for spk,timeDicts in speakerSlice.items():
         print('========= ' + str(spk) + ' =========')
         for timeDict in timeDicts:
@@ -198,11 +215,25 @@ def main(wav_path, embedding_per_second=1.0, overlap_rate=0.5):
             s = fmtTime(s)  # change point moves to the center of the slice
             e = fmtTime(e)
             print(s+' ==> '+e)
+            
+    if args.rttm:
+        lines = []
+        fmt = "SPEAKER {:s} 1 {:f} {:f} <NA> <NA> {:s} <NA>"
+        for spk,timeDicts in speakerSlice.items():
+            for timeDict in timeDicts:
+                tbeg = timeDict['start']
+                tdur = timeDict['stop'] - tbeg
+                lines.append(fmt.format(filename), tbeg, tdur, spk)
+        
+        with open(os.path.join(args.rttm_dir, "{}.wav".format(filecore)), 'w') as f:
+            f.write('\n'.join(lines))
 
-    p = PlotDiar(map=speakerSlice, wav=wav_path, gui=True, size=(25, 6))
-    p.draw()
-    p.plot.show()
+    if args.viewer:
+        p = PlotDiar(map=speakerSlice, wav=wav_path, gui=True, size=(25, 6))
+        p.draw()
+        p.plot.show()
 
 if __name__ == '__main__':
-    main(r'wavs/rmdmy.wav', embedding_per_second=1.2, overlap_rate=0.4)
+    assert args.rttm == 0 or args.rttm_dir
+    main(args.audio_file, embedding_per_second=1.2, overlap_rate=0.4)
 
