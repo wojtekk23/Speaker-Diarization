@@ -5,6 +5,7 @@ This project contains:
 * Speaker diarization based on UIS-RNN.</br>
 * *Mainly borrowed from UIS-RNN and VGG-Speaker-recognition, just link the 2 projects by generating speaker embeddings to make everything easier, and also provide an intuitive display panel*
 ## Prerequisites
+0. python 3.6.5
 1. pytorch 1.3.0
 2. keras
 3. Tensorflow 1.8-1.15
