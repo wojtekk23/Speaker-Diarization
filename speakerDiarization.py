@@ -218,14 +218,14 @@ def main(wav_path, embedding_per_second=1.0, overlap_rate=0.5):
             
     if args.rttm:
         lines = []
-        fmt = "SPEAKER {:s} 1 {:f} {:f} <NA> <NA> {:s} <NA>"
+        fmt = "SPEAKER {:s} 1 {:.1f} {:.1f} <NA> <NA> {} <NA>"
         for spk,timeDicts in speakerSlice.items():
             for timeDict in timeDicts:
                 tbeg = timeDict['start']
                 tdur = timeDict['stop'] - tbeg
-                lines.append(fmt.format(filename), tbeg, tdur, spk)
+                lines.append(fmt.format(filename, tbeg, tdur, spk))
         
-        with open(os.path.join(args.rttm_dir, "{}.wav".format(filecore)), 'w') as f:
+        with open(os.path.join(args.rttm_dir, "{}.rttm".format(filecore)), 'w') as f:
             f.write('\n'.join(lines))
 
     if args.viewer:
