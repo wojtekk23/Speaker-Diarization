@@ -110,3 +110,8 @@ The Result is showing as below:(3 speakers)
 The final result is influenced by the size of each window and the overlap rate.
 When the overlap is too large, the uis-rnn perhaps generates fewer speakers since the speaker embeddings changed smoothly, otherwise will generate more speakers.
 And also, the window size cannot be too short, it must contain enough information to generate more discrimitive speaker embeddings.
+
+In order to save the results as a file in [RTTM format](https://stackoverflow.com/a/30975109), one can use `--rttm` and `--rttm_dir` arguments.
+
+#### Splitting audios into speakers
+In order to split audio using an RTTM file, you can use the `splitAudioFromRttm.py` script.
