@@ -14,7 +14,7 @@ colors = np.array(['tab:blue', 'tab:orange', 'tab:green',
 
 global args
 
-def combined_waveplot(audio_path, rttm, output_path, figsize=(10, 3), tick_interval=10):
+def combined_waveplot(audio_path, rttm, output_path, figsize=(10, 3), tick_interval=2.5):
     signal, fs = librosa.load(audio_path, args.sr)
     
     plt.figure(figsize=figsize)
